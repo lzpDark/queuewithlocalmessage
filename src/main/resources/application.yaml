@@ -1,0 +1,32 @@
+spring:
+  application:
+    name: queue-with-local-message
+
+  # mysql
+  datasource:
+    url: jdbc:mysql://localhost/test
+    username: root
+
+  # rabbitmq
+  rabbitmq:
+    listener:
+      direct:
+        retry:
+          enabled: true
+          max-attempts: 3
+          max-interval: 4000
+        auto-startup: true
+      type: direct
+    template:
+      retry:
+        enabled: true
+        max-attempts: 3
+        initial-interval: 4000
+      mandatory: true
+    publisher-confirm-type: correlated
+    publisher-returns: true
+    host: localhost
+    username: guest
+    password: guest
+    port: 5672
+
