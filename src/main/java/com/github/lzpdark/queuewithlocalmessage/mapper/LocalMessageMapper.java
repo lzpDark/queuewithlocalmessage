@@ -1,10 +1,9 @@
 package com.github.lzpdark.queuewithlocalmessage.mapper;
 
 import com.github.lzpdark.queuewithlocalmessage.model.LocalMessage;
-import org.apache.ibatis.annotations.Delete;
-import org.apache.ibatis.annotations.Insert;
-import org.apache.ibatis.annotations.Mapper;
-import org.apache.ibatis.annotations.Options;
+import org.apache.ibatis.annotations.*;
+
+import java.util.List;
 
 /**
  * @author lzp
@@ -15,6 +14,21 @@ public interface LocalMessageMapper {
     @Options(keyProperty = "id", useGeneratedKeys = true)
     int addLocalMessage(LocalMessage localMessage);
 
-    @Delete("delete from local_message where key_id = #{key}")
-    void delete(String key);
+    @Select("select * from local_message where status = 0 order by id limit 100")
+    @Results({
+            @Result(property = "keyId", column = "key_id"),
+            @Result(property = "errorCount", column = "error_count"),
+            @Result(property = "status", column = "status"),
+            @Result(property = "created_at", column = "created_at"),
+    })
+    List<LocalMessage> selectToSendMessages();
+
+    @Delete("delete from local_message where key_id = #{keyId}")
+    void delete(String keyId);
+
+    @Update("update local_message set status = 1 where key_id = #{keyId}")
+    int failed(String keyId);
+
+    @Update("update local_message set error_count = error_count + 1 where key_id = #{keyId}")
+    int incrementErrorCount(String keyId);
 }

@@ -6,8 +6,7 @@ import com.github.lzpdark.queuewithlocalmessage.mapper.IncidentMapper;
 import com.github.lzpdark.queuewithlocalmessage.mapper.LocalMessageMapper;
 import com.github.lzpdark.queuewithlocalmessage.model.Incident;
 import com.github.lzpdark.queuewithlocalmessage.model.LocalMessage;
-import org.springframework.amqp.rabbit.connection.CorrelationData;
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import com.github.lzpdark.queuewithlocalmessage.publisher.IncidentPublisher;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -22,33 +21,34 @@ import org.springframework.web.bind.annotation.RestController;
 public class PublishController {
 
     @Autowired
-    RabbitTemplate rabbitTemplate;
-    @Autowired
     IncidentMapper incidentMapper;
     @Autowired
     LocalMessageMapper localMessageMapper;
+    @Autowired
+    IncidentPublisher incidentPublisher;
 
     @GetMapping("")
     @Transactional
-    public Object test() throws JsonProcessingException {
+    public Object test() {
 
         long millis = System.currentTimeMillis();
+        // incident record
         Incident incident = new Incident("title-" + millis, "content-" + millis, "zzz", "aaa");
         incidentMapper.addIncident(incident);
+
+        // local message record
+        String json;
+        try {
+            json = new ObjectMapper().writeValueAsString(incident);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("incident to json error", e);
+        }
         Integer incidentId = incident.getId();
-        CorrelationData correlationData = new CorrelationData();
-        correlationData.setId("" + incidentId);
-        LocalMessage localMessage = new LocalMessage("" + incidentId, incident.getContent());
+        LocalMessage localMessage = new LocalMessage("" + incidentId, json);
         localMessageMapper.addLocalMessage(localMessage);
 
-        rabbitTemplate.convertAndSend("exchange.incident", "route.incident",
-                new ObjectMapper().writeValueAsString(incident),
-                message -> {
-                    message.getMessageProperties().setCorrelationId("" + incidentId);
-                    message.getMessageProperties().setExpiration("30000");
-                    return message;
-                },
-                correlationData);
+        // send message
+        incidentPublisher.sendIncident(incident);
         return "done";
     }
 }
