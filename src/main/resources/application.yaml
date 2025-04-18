@@ -16,7 +16,7 @@ spring:
           max-attempts: 3
           max-interval: 4000
         auto-startup: true
-        prefetch: 30 # 2?consumer?????unack??60?????????????????????
+        prefetch: 30 # 2个consumer的情况下，unack消息60个的时候就不再接收消息了，造成“消息阻塞”
       type: direct
     template:
       retry:
